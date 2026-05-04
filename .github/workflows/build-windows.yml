@@ -1,0 +1,27 @@
+name: Build Windows Executables
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Visual Studio solution
+        run: |
+          msbuild DemulShooter.sln /p:Configuration=Release /p:Platform=x86
+
+      - name: Upload built artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DemulShooter-Windows-Release
+          path: |
+            DemulShooter/bin/Release/
+            DemulShooter_GUI/bin/Release/
+            DsDiag/bin/Release/
+            DemulShooterX64/bin/Release/
