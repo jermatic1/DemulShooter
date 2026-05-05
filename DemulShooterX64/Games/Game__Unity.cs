@@ -88,8 +88,9 @@ namespace DemulShooterX64.Games
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine(ex.ToString());
                     Logger.WriteLog("Error trying to hook " + _Target_Process_Name + ".exe");
                 }
             }
