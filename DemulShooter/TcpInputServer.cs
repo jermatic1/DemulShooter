@@ -8,11 +8,12 @@ using DsCore;
 namespace DemulShooter
 {
     /// <summary>
-    /// TCP Input Server for DemulShooter binary protocol.
-    /// Compatible with batocera-wine-guns and other clients using the DemulShooter packet format.
-    /// Listens on 127.0.0.1:33610 and parses binary packets containing gun coordinates and button states.
+    /// TCP Input Server for simplified mouse protocol.
+    /// Compatible with batocera-wine-guns for BTN_LEFT (trigger), BTN_RIGHT (reload), and BTN_MIDDLE (action).
+    /// Packet format: X(float) Y(float) EnableInputsHack(byte) HideCrosshairs(byte) Trigger(byte) Reload(byte) Action(byte)
+    /// Total: 13 bytes
     /// </summary>
-    internal delegate void TcpInputDataHandler(float[] axisX, float[] axisY, bool[] trigger, bool[] reload);
+    internal delegate void TcpInputDataHandler(float[] axisX, float[] axisY, bool[] trigger, bool[] reload, bool[] action);
 
     internal class TcpInputServer
     {
@@ -147,104 +148,31 @@ namespace DemulShooter
         {
             try
             {
-                float[] axisX = new float[MAX_PLAYERS];
-                float[] axisY = new float[MAX_PLAYERS];
-                bool[] trigger = new bool[MAX_PLAYERS];
-                bool[] reload = new bool[MAX_PLAYERS];
-                bool[] action = new bool[MAX_PLAYERS];
+                // Simple mouse protocol: X(float) Y(float) EnableInputsHack(byte) HideCrosshairs(byte) Trigger(byte) Reload(byte) Action(byte)
+                // Total: 13 bytes
+                const int EXPECTED_SIZE = 13;
 
-                int offset = 0;
-
-                // Default/pbx format: X[2] Y[2] EnableInputsHack HideCrosshairs Trigger[2]
-                if (packetSize == 20 && bytesRead >= 20)
-                {
-                    axisX[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisX[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisY[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisY[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
-
-                    offset += 1; // EnableInputsHack
-                    offset += 1; // HideCrosshairs
-
-                    trigger[0] = buffer[offset++] != 0;
-                    trigger[1] = buffer[offset++] != 0;
-                }
-                // rha format: X[4] Y[4] EnableInputsHack HideCrosshairs Trigger[4]
-                else if (packetSize == 38 && bytesRead >= 38)
-                {
-                    for (int i = 0; i < 4; i++)
-                    {
-                        axisX[i] = BitConverter.ToSingle(buffer, offset);
-                        offset += 4;
-                    }
-                    for (int i = 0; i < 4; i++)
-                    {
-                        axisY[i] = BitConverter.ToSingle(buffer, offset);
-                        offset += 4;
-                    }
-
-                    offset += 1; // EnableInputsHack
-                    offset += 1; // HideCrosshairs
-
-                    for (int i = 0; i < 4; i++)
-                        trigger[i] = buffer[offset++] != 0;
-                }
-                // tra format: X[4] Y[4] EnableInputsHack HideCrosshairs Reload[4] Trigger[4]
-                else if (packetSize == 42 && bytesRead >= 42)
-                {
-                    for (int i = 0; i < 4; i++)
-                    {
-                        axisX[i] = BitConverter.ToSingle(buffer, offset);
-                        offset += 4;
-                    }
-                    for (int i = 0; i < 4; i++)
-                    {
-                        axisY[i] = BitConverter.ToSingle(buffer, offset);
-                        offset += 4;
-                    }
-
-                    offset += 1; // EnableInputsHack
-                    offset += 1; // HideCrosshairs
-
-                    for (int i = 0; i < 4; i++)
-                        reload[i] = buffer[offset++] != 0;
-                    for (int i = 0; i < 4; i++)
-                        trigger[i] = buffer[offset++] != 0;
-                }
-                // wws format: X[2] Y[2] EnableInputsHack HideCrosshairs Reload[2] Trigger[2]
-                else if (packetSize == 22 && bytesRead >= 22)
-                {
-                    axisX[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisX[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisY[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisY[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
-
-                    offset += 1; // EnableInputsHack
-                    offset += 1; // HideCrosshairs
-
-                    reload[0] = buffer[offset++] != 0;
-                    reload[1] = buffer[offset++] != 0;
-                    trigger[0] = buffer[offset++] != 0;
-                    trigger[1] = buffer[offset++] != 0;
-                }
-                // pvz format: X[1] Y[1] EnableInputsHack HideCrosshairs Trigger[1]
-                else if (packetSize == 11 && bytesRead >= 11)
-                {
-                    axisX[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
-                    axisY[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
-
-                    offset += 1; // EnableInputsHack
-                    offset += 1; // HideCrosshairs
-
-                    trigger[0] = buffer[offset++] != 0;
-                }
-                else
-                {
-                    // Unknown format, skip
+                if (bytesRead < EXPECTED_SIZE)
                     return;
-                }
 
-                _dataHandler?.Invoke(axisX, axisY, trigger, reload);
+                float axisX = BitConverter.ToSingle(buffer, 0);
+                float axisY = BitConverter.ToSingle(buffer, 4);
+
+                // Skip EnableInputsHack and HideCrosshairs flags
+                int offset = 8;
+
+                bool trigger = buffer[offset++] != 0;  // BTN_LEFT
+                bool reload = buffer[offset++] != 0;   // BTN_RIGHT
+                bool action = buffer[offset++] != 0;   // BTN_MIDDLE
+
+                // Convert to arrays for the handler (only player 1 supported in this simple protocol)
+                float[] axisXArray = new float[4] { axisX, 0, 0, 0 };
+                float[] axisYArray = new float[4] { axisY, 0, 0, 0 };
+                bool[] triggerArray = new bool[4] { trigger, false, false, false };
+                bool[] reloadArray = new bool[4] { reload, false, false, false };
+                bool[] actionArray = new bool[4] { action, false, false, false };
+
+                _dataHandler?.Invoke(axisXArray, axisYArray, triggerArray, reloadArray, actionArray);
             }
             catch (Exception ex)
             {

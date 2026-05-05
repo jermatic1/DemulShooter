@@ -1259,8 +1259,9 @@ namespace DemulShooter
         /// <summary>
         /// Handler for binary DemulShooter protocol data from TCP clients.
         /// Converts normalized float coordinates and button states to player input events.
+        /// Supports BTN_LEFT (trigger), BTN_RIGHT (reload), and BTN_MIDDLE (action).
         /// </summary>
-        internal void ProcessTcpInputData(float[] axisX, float[] axisY, bool[] trigger, bool[] reload)
+        internal void ProcessTcpInputData(float[] axisX, float[] axisY, bool[] trigger, bool[] reload, bool[] action)
         {
             if (_Game == null || !_Game.ProcessHooked)
                 return;
@@ -1281,7 +1282,7 @@ namespace DemulShooter
 
                     RawInputcontrollerButtonEvent buttonEvents = 0;
 
-                    // Handle trigger (fire)
+                    // Handle trigger (BTN_LEFT)
                     bool currentTrigger = trigger[idx];
                     if (currentTrigger && !player.TcpFirePressed)
                         buttonEvents |= RawInputcontrollerButtonEvent.OnScreenTriggerDown;
@@ -1289,13 +1290,21 @@ namespace DemulShooter
                         buttonEvents |= RawInputcontrollerButtonEvent.OnScreenTriggerUp;
                     player.TcpFirePressed = currentTrigger;
 
-                    // Handle reload
+                    // Handle reload (BTN_RIGHT)
                     bool currentReload = reload[idx];
                     if (currentReload && !player.TcpReloadPressed)
                         buttonEvents |= RawInputcontrollerButtonEvent.OffScreenTriggerDown;
                     else if (!currentReload && player.TcpReloadPressed)
                         buttonEvents |= RawInputcontrollerButtonEvent.OffScreenTriggerUp;
                     player.TcpReloadPressed = currentReload;
+
+                    // Handle action (BTN_MIDDLE)
+                    bool currentAction = action[idx];
+                    if (currentAction && !player.TcpActionPressed)
+                        buttonEvents |= RawInputcontrollerButtonEvent.ActionDown;
+                    else if (!currentAction && player.TcpActionPressed)
+                        buttonEvents |= RawInputcontrollerButtonEvent.ActionUp;
+                    player.TcpActionPressed = currentAction;
 
                     player.RIController.Computed_Buttons = buttonEvents;
 
