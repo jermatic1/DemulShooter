@@ -1081,6 +1081,8 @@ namespace DemulShooterX64
 
             foreach (IntPtr handle in EnumerateProcessWindowHandles(_TargetProcess.Id))
             {
+                Logger.WriteLog("Found a window : Handle = 0x" + handle.ToString("X8"));
+
                 int length = Win32API.GetWindowTextLength(handle);
                 if (length >= 0)
                 {
