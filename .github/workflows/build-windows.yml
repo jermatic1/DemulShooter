@@ -28,8 +28,8 @@ jobs:
       - name: Build DemulShooterX64 project (x64)
         shell: pwsh
         run: |
-          # Build DsCore with x86 platform (as per solution mapping)
-          & "$env:MSBUILD" DsCore/DsCore.csproj /p:Configuration=Release /p:Platform=x86
+          # Build DsCore with x64 platform so output lands in bin\x64\Release\
+          & "$env:MSBUILD" DsCore/DsCore.csproj /p:Configuration=Release /p:Platform=x64
           # Build DemulShooterX64 with x64 platform, skipping project references rebuild
           & "$env:MSBUILD" DemulShooterX64/DemulShooterX64.csproj /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=false
 
