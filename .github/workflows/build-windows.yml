@@ -28,6 +28,9 @@ jobs:
       - name: Build DemulShooterX64 project (x64)
         shell: pwsh
         run: |
+          # First build DsCore with Any CPU since it doesn't have x64 config
+          & "$env:MSBUILD" DsCore/DsCore.csproj /p:Configuration=Release /p:Platform="Any CPU"
+          # Then build DemulShooterX64 with x64
           & "$env:MSBUILD" DemulShooterX64/DemulShooterX64.csproj /p:Configuration=Release /p:Platform=x64
 
       - name: Upload x86 artifacts
