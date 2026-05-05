@@ -12,9 +12,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Visual Studio solution
+      - name: Locate MSBuild
+        shell: pwsh
         run: |
-          msbuild DemulShooter.sln /p:Configuration=Release /p:Platform=x86
+          $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe
+          if (-not $msbuild) { throw 'MSBuild not found via vswhere' }
+          Write-Host "Found MSBuild: $msbuild"
+          echo "MSBUILD=$msbuild" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
+      - name: Build Visual Studio solution
+        shell: pwsh
+        run: |
+          & "$env:MSBUILD" DemulShooter.sln /p:Configuration=Release /p:Platform=x86
 
       - name: Upload built artifacts
         uses: actions/upload-artifact@v4
