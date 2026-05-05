@@ -1126,6 +1126,8 @@ namespace DemulShooterX64
                 Console.WriteLine($"Thread ID: {thread.Id}, Status: {thread.ThreadState}, Priority: {thread.PriorityLevel}");
             }
 
+            Console.WriteLine("Done checking???");
+
             foreach (ProcessThread thread in Process.GetProcessById(processId).Threads)
             {
                 try {
