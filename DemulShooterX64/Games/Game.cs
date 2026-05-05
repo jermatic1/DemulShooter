@@ -1113,9 +1113,19 @@ namespace DemulShooterX64
         {
             List<IntPtr> handles = new List<IntPtr>();
 
+            Console.WriteLine("EnumerateProcessWindowHandles");
+
             foreach (ProcessThread thread in Process.GetProcessById(processId).Threads)
             {
-                Win32API.EnumThreadWindows(thread.Id, (hWnd, lParam) => { handles.Add(hWnd); return true; }, IntPtr.Zero);
+                try {
+                    Console.WriteLine(thread.Id);
+
+                    Win32API.EnumThreadWindows(thread.Id, (hWnd, lParam) => { handles.Add(hWnd); return true; }, IntPtr.Zero);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
             }
             return handles;
         }
