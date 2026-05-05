@@ -1121,6 +1121,11 @@ namespace DemulShooterX64
 
             Console.WriteLine("Got process threads: " + p.Threads.Count.ToString());
 
+            foreach (ProcessThread thread in p.Threads)
+            {
+                Console.WriteLine($"Thread ID: {thread.Id}, Status: {thread.ThreadState}, Priority: {thread.PriorityLevel}");
+            }
+
             foreach (ProcessThread thread in Process.GetProcessById(processId).Threads)
             {
                 try {
