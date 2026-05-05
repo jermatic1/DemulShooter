@@ -1103,7 +1103,7 @@ namespace DemulShooter
         {
             Logger.WriteLog("FindGameWindow_Equals");
             Logger.WriteLog(TargetWindowTitle);
-            Logger.WriteLog(_TargetProcess.Id);
+            Logger.WriteLog(_TargetProcess.Id.ToString());
 
             foreach (IntPtr handle in EnumerateProcessWindowHandles(_TargetProcess.Id))
             {
