@@ -264,8 +264,8 @@ namespace DemulShooter
 
             if (tcpInputEnabled)
             {
-                Logger.WriteLog("Starting TCP input server on port " + Configurator.GetInstance().TcpInputPort);
-                _TcpInputServer = new TcpInputServer(Configurator.GetInstance().TcpInputPort, ProcessTcpInputCommand);
+                Logger.WriteLog("Starting TCP input server on default port (33610)");
+                _TcpInputServer = new TcpInputServer(ProcessTcpInputData);
                 _TcpInputServer.Start();
             }
 
@@ -1253,6 +1253,54 @@ namespace DemulShooter
                 player.RIController.Computed_Buttons = buttonEvents;
 
                 ProcessPlayerComputedInput(player);
+            }
+        }
+
+        /// <summary>
+        /// Handler for binary DemulShooter protocol data from TCP clients.
+        /// Converts normalized float coordinates and button states to player input events.
+        /// </summary>
+        internal void ProcessTcpInputData(float[] axisX, float[] axisY, bool[] trigger, bool[] reload)
+        {
+            if (_Game == null || !_Game.ProcessHooked)
+                return;
+
+            lock (_TcpInputSync)
+            {
+                for (int playerId = 1; playerId <= 4; playerId++)
+                {
+                    PlayerSettings player = Configurator.GetInstance().GetPlayerSettings(playerId);
+                    if (player == null || player.Mode != PlayerSettings.PLAYER_MODE_TCPINPUT || player.RIController == null)
+                        continue;
+
+                    int idx = playerId - 1;
+
+                    // Convert normalized coordinates (0.0-1.0) to screen coordinates
+                    player.RIController.Computed_X = (int)(axisX[idx] * 0xFFFF);
+                    player.RIController.Computed_Y = (int)(axisY[idx] * 0xFFFF);
+
+                    RawInputcontrollerButtonEvent buttonEvents = 0;
+
+                    // Handle trigger (fire)
+                    bool currentTrigger = trigger[idx];
+                    if (currentTrigger && !player.TcpFirePressed)
+                        buttonEvents |= RawInputcontrollerButtonEvent.OnScreenTriggerDown;
+                    else if (!currentTrigger && player.TcpFirePressed)
+                        buttonEvents |= RawInputcontrollerButtonEvent.OnScreenTriggerUp;
+                    player.TcpFirePressed = currentTrigger;
+
+                    // Handle reload
+                    bool currentReload = reload[idx];
+                    if (currentReload && !player.TcpReloadPressed)
+                        buttonEvents |= RawInputcontrollerButtonEvent.OffScreenTriggerDown;
+                    else if (!currentReload && player.TcpReloadPressed)
+                        buttonEvents |= RawInputcontrollerButtonEvent.OffScreenTriggerUp;
+                    player.TcpReloadPressed = currentReload;
+
+                    player.RIController.Computed_Buttons = buttonEvents;
+
+                    ProcessPlayerComputedInput(player);
+                }
             }
         }
 

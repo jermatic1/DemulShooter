@@ -2,26 +2,31 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using DsCore;
 
 namespace DemulShooter
 {
-    internal delegate void TcpInputCommandHandler(int playerId, int? x, int? y, bool? fire, bool? reload, bool? action);
+    /// <summary>
+    /// TCP Input Server for DemulShooter binary protocol.
+    /// Compatible with batocera-wine-guns and other clients using the DemulShooter packet format.
+    /// Listens on 127.0.0.1:33610 and parses binary packets containing gun coordinates and button states.
+    /// </summary>
+    internal delegate void TcpInputDataHandler(float[] axisX, float[] axisY, bool[] trigger, bool[] reload);
 
     internal class TcpInputServer
     {
-        private readonly int _port;
-        private readonly TcpInputCommandHandler _commandHandler;
+        private const int DS_PORT = 33610;
+        private const int MAX_PLAYERS = 4;
+
+        private readonly TcpInputDataHandler _dataHandler;
         private TcpListener _listener;
         private Thread _listenerThread;
         private volatile bool _running;
 
-        public TcpInputServer(int port, TcpInputCommandHandler commandHandler)
+        public TcpInputServer(TcpInputDataHandler dataHandler)
         {
-            _port = port;
-            _commandHandler = commandHandler;
+            _dataHandler = dataHandler;
         }
 
         public void Start()
@@ -57,9 +62,10 @@ namespace DemulShooter
         {
             try
             {
-                _listener = new TcpListener(IPAddress.Loopback, _port);
+                _listener = new TcpListener(IPAddress.Loopback, DS_PORT);
+                _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
                 _listener.Start();
-                Logger.WriteLog("TcpInputServer listening on 127.0.0.1:" + _port);
+                Logger.WriteLog("TcpInputServer listening on 127.0.0.1:" + DS_PORT);
 
                 while (_running)
                 {
@@ -68,41 +74,12 @@ namespace DemulShooter
                     {
                         client = _listener.AcceptTcpClient();
                         Logger.WriteLog("TcpInputServer: client connected " + client.Client.RemoteEndPoint);
-                        using (NetworkStream stream = client.GetStream())
-                        using (StreamReader reader = new StreamReader(stream, Encoding.ASCII))
-                        using (StreamWriter writer = new StreamWriter(stream, Encoding.ASCII) { AutoFlush = true })
-                        {
-                            writer.WriteLine("DemulShooter TCP input ready");
-                            while (_running && client.Connected)
-                            {
-                                string line = reader.ReadLine();
-                                if (line == null)
-                                    break;
-
-                                line = line.Trim();
-                                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith(";"))
-                                    continue;
-
-                                if (TryParseCommand(line, out int playerId, out int? x, out int? y, out bool? fire, out bool? reload, out bool? action))
-                                {
-                                    _commandHandler(playerId, x, y, fire, reload, action);
-                                    writer.WriteLine("OK");
-                                }
-                                else
-                                {
-                                    writer.WriteLine("ERR");
-                                }
-                            }
-                        }
+                        HandleClient(client);
                     }
                     catch (SocketException ex)
                     {
                         if (_running)
                             Logger.WriteLog("TcpInputServer socket error: " + ex.Message);
-                    }
-                    catch (IOException)
-                    {
-                        // client disconnected
                     }
                     catch (Exception ex)
                     {
@@ -123,123 +100,156 @@ namespace DemulShooter
             }
         }
 
-        private bool TryParseCommand(string command, out int playerId, out int? x, out int? y, out bool? fire, out bool? reload, out bool? action)
+        private void HandleClient(TcpClient client)
         {
-            playerId = 1;
-            x = null;
-            y = null;
-            fire = null;
-            reload = null;
-            action = null;
-            bool anyParsed = false;
-
-            string[] tokens = command.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (string rawToken in tokens)
+            using (NetworkStream stream = client.GetStream())
             {
-                string token = rawToken.Trim();
-                if (token.Length == 0)
-                    continue;
+                byte[] buffer = new byte[256];
+                int expectedSize = -1;
 
-                if (token.StartsWith("p", StringComparison.InvariantCultureIgnoreCase) && token.Length > 1)
+                while (_running && client.Connected)
                 {
-                    if (int.TryParse(token.Substring(1), out int pid) && pid >= 1 && pid <= 4)
+                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                    if (bytesRead == 0)
+                        break;
+
+                    // Auto-detect packet size from first valid packet
+                    if (expectedSize < 0)
                     {
-                        playerId = pid;
-                        anyParsed = true;
+                        expectedSize = DetectPacketSize(buffer, bytesRead);
+                        if (expectedSize < 0)
+                            continue;
                     }
-                    continue;
-                }
 
-                string[] parts = token.Split('=');
-                if (parts.Length != 2)
-                    continue;
-
-                string key = parts[0].Trim().ToUpperInvariant();
-                string value = parts[1].Trim();
-
-                switch (key)
-                {
-                    case "PLAYER":
-                    case "P":
-                        if (int.TryParse(value, out int pid) && pid >= 1 && pid <= 4)
-                        {
-                            playerId = pid;
-                            anyParsed = true;
-                        }
-                        break;
-                    case "X":
-                        if (TryParseAxis(value, out int xValue))
-                        {
-                            x = xValue;
-                            anyParsed = true;
-                        }
-                        break;
-                    case "Y":
-                        if (TryParseAxis(value, out int yValue))
-                        {
-                            y = yValue;
-                            anyParsed = true;
-                        }
-                        break;
-                    case "FIRE":
-                        fire = ParseToggle(value);
-                        if (fire.HasValue)
-                            anyParsed = true;
-                        break;
-                    case "RELOAD":
-                        reload = ParseToggle(value);
-                        if (reload.HasValue)
-                            anyParsed = true;
-                        break;
-                    case "ACTION":
-                        action = ParseToggle(value);
-                        if (action.HasValue)
-                            anyParsed = true;
-                        break;
+                    if (bytesRead >= expectedSize)
+                    {
+                        TryParsePacket(buffer, bytesRead, expectedSize);
+                    }
                 }
             }
-
-            return anyParsed;
         }
 
-        private bool TryParseAxis(string value, out int axis)
+        private int DetectPacketSize(byte[] buffer, int length)
         {
-            axis = 0;
-            if (string.IsNullOrEmpty(value))
-                return false;
+            // Common packet sizes for DemulShooter games
+            int[] validSizes = { 11, 20, 21, 22, 24, 25, 38, 42 };
 
-            value = value.Trim();
-            if (value.EndsWith("%"))
+            foreach (int size in validSizes)
             {
-                if (int.TryParse(value.Substring(0, value.Length - 1), out int percent) && percent >= 0 && percent <= 100)
-                {
-                    axis = (int)((percent / 100.0) * 0xFFFF);
-                    return true;
-                }
-                return false;
+                if (length >= size)
+                    return size;
             }
 
-            if (int.TryParse(value, out int rawValue) && rawValue >= 0)
-            {
-                axis = rawValue;
-                return true;
-            }
-
-            return false;
+            return length > 0 ? length : -1;
         }
 
-        private bool? ParseToggle(string value)
+        private void TryParsePacket(byte[] buffer, int bytesRead, int packetSize)
         {
-            if (string.IsNullOrEmpty(value))
-                return null;
+            try
+            {
+                float[] axisX = new float[MAX_PLAYERS];
+                float[] axisY = new float[MAX_PLAYERS];
+                bool[] trigger = new bool[MAX_PLAYERS];
+                bool[] reload = new bool[MAX_PLAYERS];
+                bool[] action = new bool[MAX_PLAYERS];
 
-            string upperValue = value.Trim().ToUpperInvariant();
-            if (upperValue == "1" || upperValue == "ON" || upperValue == "DOWN" || upperValue == "TRUE")
-                return true;
-            if (upperValue == "0" || upperValue == "OFF" || upperValue == "UP" || upperValue == "FALSE")
-                return false;
+                int offset = 0;
 
-            return null;
+                // Default/pbx format: X[2] Y[2] EnableInputsHack HideCrosshairs Trigger[2]
+                if (packetSize == 20 && bytesRead >= 20)
+                {
+                    axisX[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisX[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisY[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisY[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
+
+                    offset += 1; // EnableInputsHack
+                    offset += 1; // HideCrosshairs
+
+                    trigger[0] = buffer[offset++] != 0;
+                    trigger[1] = buffer[offset++] != 0;
+                }
+                // rha format: X[4] Y[4] EnableInputsHack HideCrosshairs Trigger[4]
+                else if (packetSize == 38 && bytesRead >= 38)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        axisX[i] = BitConverter.ToSingle(buffer, offset);
+                        offset += 4;
+                    }
+                    for (int i = 0; i < 4; i++)
+                    {
+                        axisY[i] = BitConverter.ToSingle(buffer, offset);
+                        offset += 4;
+                    }
+
+                    offset += 1; // EnableInputsHack
+                    offset += 1; // HideCrosshairs
+
+                    for (int i = 0; i < 4; i++)
+                        trigger[i] = buffer[offset++] != 0;
+                }
+                // tra format: X[4] Y[4] EnableInputsHack HideCrosshairs Reload[4] Trigger[4]
+                else if (packetSize == 42 && bytesRead >= 42)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        axisX[i] = BitConverter.ToSingle(buffer, offset);
+                        offset += 4;
+                    }
+                    for (int i = 0; i < 4; i++)
+                    {
+                        axisY[i] = BitConverter.ToSingle(buffer, offset);
+                        offset += 4;
+                    }
+
+                    offset += 1; // EnableInputsHack
+                    offset += 1; // HideCrosshairs
+
+                    for (int i = 0; i < 4; i++)
+                        reload[i] = buffer[offset++] != 0;
+                    for (int i = 0; i < 4; i++)
+                        trigger[i] = buffer[offset++] != 0;
+                }
+                // wws format: X[2] Y[2] EnableInputsHack HideCrosshairs Reload[2] Trigger[2]
+                else if (packetSize == 22 && bytesRead >= 22)
+                {
+                    axisX[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisX[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisY[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisY[1] = BitConverter.ToSingle(buffer, offset); offset += 4;
+
+                    offset += 1; // EnableInputsHack
+                    offset += 1; // HideCrosshairs
+
+                    reload[0] = buffer[offset++] != 0;
+                    reload[1] = buffer[offset++] != 0;
+                    trigger[0] = buffer[offset++] != 0;
+                    trigger[1] = buffer[offset++] != 0;
+                }
+                // pvz format: X[1] Y[1] EnableInputsHack HideCrosshairs Trigger[1]
+                else if (packetSize == 11 && bytesRead >= 11)
+                {
+                    axisX[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
+                    axisY[0] = BitConverter.ToSingle(buffer, offset); offset += 4;
+
+                    offset += 1; // EnableInputsHack
+                    offset += 1; // HideCrosshairs
+
+                    trigger[0] = buffer[offset++] != 0;
+                }
+                else
+                {
+                    // Unknown format, skip
+                    return;
+                }
+
+                _dataHandler?.Invoke(axisX, axisY, trigger, reload);
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("TcpInputServer packet parse error: " + ex.Message);
+            }
         }
     }
 }
