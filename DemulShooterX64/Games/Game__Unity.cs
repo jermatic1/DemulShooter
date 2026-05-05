@@ -68,8 +68,8 @@ namespace DemulShooterX64.Games
 
                             // The game may start with other Windows than the main one (BepInEx console, other stuff.....) so we need to filter
                             // the displayed window according to the Title, if DemulShooter is started before the game,  to hook the correct one
-                            if (FindGameWindow_Equals(_MainWindowTitle))
-                            {
+                            // if (FindGameWindow_Equals(_MainWindowTitle))
+                            // {
                                 String AssemblyDllPath = _TargetProcess.MainModule.FileName.Replace(_Target_Process_Name + ".exe", _Target_Process_Name + @"_Data\Managed\Assembly-CSharp.dll");
                                 CheckMd5(AssemblyDllPath);
 
@@ -84,12 +84,12 @@ namespace DemulShooterX64.Games
 
                                 _ProcessHooked = true;
                                 RaiseGameHookedEvent();
-                            }
-                            else
-                            {
-                                Logger.WriteLog("Game Window not found");
-                                return;
-                            }
+                            // }
+                            // else
+                            // {
+                            //    Logger.WriteLog("Game Window not found");
+                            //    return;
+                            // }
                         }
                     }
                 }
