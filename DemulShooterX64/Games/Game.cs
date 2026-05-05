@@ -1113,7 +1113,9 @@ namespace DemulShooterX64
         {
             List<IntPtr> handles = new List<IntPtr>();
 
-            Console.WriteLine("EnumerateProcessWindowHandles");
+            Console.WriteLine("EnumerateProcessWindowHandles: " + processId.ToString());
+
+            var p = Process.GetProcessById(processId);
 
             foreach (ProcessThread thread in Process.GetProcessById(processId).Threads)
             {
