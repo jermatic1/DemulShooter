@@ -30,8 +30,8 @@ jobs:
         run: |
           # Build DsCore with x86 platform (as per solution mapping)
           & "$env:MSBUILD" DsCore/DsCore.csproj /p:Configuration=Release /p:Platform=x86
-          # Build DemulShooterX64 with x64 platform
-          & "$env:MSBUILD" DemulShooterX64/DemulShooterX64.csproj /p:Configuration=Release /p:Platform=x64
+          # Build DemulShooterX64 with x64 platform, skipping project references rebuild
+          & "$env:MSBUILD" DemulShooterX64/DemulShooterX64.csproj /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=false
 
       - name: Upload x86 artifacts
         uses: actions/upload-artifact@v4
