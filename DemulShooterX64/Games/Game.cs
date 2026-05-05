@@ -1117,6 +1117,10 @@ namespace DemulShooterX64
 
             var p = Process.GetProcessById(processId);
 
+            Console.WriteLine("Got process: " + p.ProcessName);
+
+            Console.WriteLine("Got process threads: " + p.Threads.Length.ToString());
+
             foreach (ProcessThread thread in Process.GetProcessById(processId).Threads)
             {
                 try {
