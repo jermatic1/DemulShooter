@@ -414,7 +414,7 @@ namespace DsCore.Config
         private bool _OutputEnabled = false;
         private bool _Wm_OutputEnabled = true;
         private bool _Net_OutputEnabled = false;
-        private int _TcpInputPort = 9999;
+        private int _TcpInputPort = 33610;
         private int _OutputPollingDelay = 1;
         private int _OutputCustomDamagedDelay = 200;
         private int _OutputCustomRecoilOnDelay = 10;

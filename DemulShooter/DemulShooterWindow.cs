@@ -264,8 +264,9 @@ namespace DemulShooter
 
             if (tcpInputEnabled)
             {
-                Logger.WriteLog("Starting TCP input server on default port (33610)");
-                _TcpInputServer = new TcpInputServer(ProcessTcpInputData);
+                int tcpPort = Configurator.GetInstance().TcpInputPort;
+                Logger.WriteLog("Starting TCP input server on port " + tcpPort);
+                _TcpInputServer = new TcpInputServer(ProcessTcpInputData, tcpPort);
                 _TcpInputServer.Start();
             }
 

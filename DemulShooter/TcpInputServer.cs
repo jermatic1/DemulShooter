@@ -17,17 +17,18 @@ namespace DemulShooter
 
     internal class TcpInputServer
     {
-        private const int DS_PORT = 33610;
         private const int MAX_PLAYERS = 4;
 
         private readonly TcpInputDataHandler _dataHandler;
+        private readonly int _port;
         private TcpListener _listener;
         private Thread _listenerThread;
         private volatile bool _running;
 
-        public TcpInputServer(TcpInputDataHandler dataHandler)
+        public TcpInputServer(TcpInputDataHandler dataHandler, int port)
         {
             _dataHandler = dataHandler;
+            _port = port;
         }
 
         public void Start()
@@ -63,10 +64,10 @@ namespace DemulShooter
         {
             try
             {
-                _listener = new TcpListener(IPAddress.Loopback, DS_PORT);
+                _listener = new TcpListener(IPAddress.Loopback, _port);
                 _listener.Server.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, 1);
                 _listener.Start();
-                Logger.WriteLog("TcpInputServer listening on 127.0.0.1:" + DS_PORT);
+                Logger.WriteLog("TcpInputServer listening on 127.0.0.1:" + _port);
 
                 while (_running)
                 {
