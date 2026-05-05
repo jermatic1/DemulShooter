@@ -28,7 +28,10 @@ jobs:
       - name: Build DemulShooterX64 project (x64)
         shell: pwsh
         run: |
-          & "$env:MSBUILD" DemulShooter.sln /p:Configuration=Release /p:Platform=x64 /t:DsCore /t:DemulShooterX64
+          # Build DsCore with x86 platform (as per solution mapping)
+          & "$env:MSBUILD" DsCore/DsCore.csproj /p:Configuration=Release /p:Platform=x86
+          # Build DemulShooterX64 with x64 platform
+          & "$env:MSBUILD" DemulShooterX64/DemulShooterX64.csproj /p:Configuration=Release /p:Platform=x64
 
       - name: Upload x86 artifacts
         uses: actions/upload-artifact@v4
