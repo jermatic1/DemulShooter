@@ -29,15 +29,15 @@ namespace DemulShooter
         protected bool _DisableWindow = false;
         protected string _CustomTargetProcessName = string.Empty;
         protected bool _VerboseEnable;
-        protected bool _WidescreenHack = false ;           
+        protected bool _WidescreenHack = false ;
 
         #region Process variables
 
         protected System.Timers.Timer _tProcess;
         protected String _RomName = string.Empty;
-        protected Process _TargetProcess;        
+        protected Process _TargetProcess;
         protected String _Target_Process_Name = String.Empty;
-        protected IntPtr _TargetProcess_MemoryBaseAddress = IntPtr.Zero;        
+        protected IntPtr _TargetProcess_MemoryBaseAddress = IntPtr.Zero;
         protected IntPtr _ProcessHandle = IntPtr.Zero;
         protected IntPtr _GameWindowHandle = IntPtr.Zero;
 
@@ -55,8 +55,8 @@ namespace DemulShooter
 
         protected bool _ProcessHooked;
         public bool ProcessHooked
-        { 
-            get { return _ProcessHooked; } 
+        {
+            get { return _ProcessHooked; }
         }
 
         #endregion
@@ -116,8 +116,8 @@ namespace DemulShooter
 
             _tProcess = new System.Timers.Timer();
             _tProcess.Interval = 500;
-            _tProcess.Elapsed += new ElapsedEventHandler(tProcess_Elapsed); 
-            _tProcess.Enabled = true; 
+            _tProcess.Elapsed += new ElapsedEventHandler(tProcess_Elapsed);
+            _tProcess.Enabled = true;
         }
 
         ~Game()
@@ -184,7 +184,7 @@ namespace DemulShooter
                 {
                     _WidescreenHack = true;
                 }
-                 
+
             }
         }
 
@@ -192,7 +192,7 @@ namespace DemulShooter
 
         /// <summary>
         /// Compute the MD5 hash of the target executable and compare it to the known list of MD5 Hashes
-        /// This can be usefull if people are using some unknown dump with different memory, 
+        /// This can be usefull if people are using some unknown dump with different memory,
         /// or a wrong version of emulator
         /// This is absolutely not blocking, just for debuging with output log
         /// </summary>
@@ -223,7 +223,7 @@ namespace DemulShooter
             {
                 Logger.WriteLog("MD5 Hash is corresponding to a known target = " + FoundMd5);
             }
-            
+
         }
 
         /// <summary>
@@ -243,7 +243,7 @@ namespace DemulShooter
                     }
                 }
             }
-        }        
+        }
 
         #endregion
 
@@ -465,7 +465,7 @@ namespace DemulShooter
                 return toOffVal - (int)(toRange * frac);
             }
         }
-        
+
         /// <summary>
         /// Convert screen location of pointer to Client area location
         /// </summary>
@@ -618,7 +618,7 @@ namespace DemulShooter
                                     UInt32 v = UInt32.Parse(buffer[1].Substring(3).Trim(), NumberStyles.HexNumber);
                                     this.GetType().GetField(FieldName, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase).SetValue(this, v);
                                     Logger.WriteLog(FieldName + " successfully set to following value : 0x" + v.ToString("X8"));
-                                }                                
+                                }
                             }
                             catch (Exception ex)
                             {
@@ -635,7 +635,7 @@ namespace DemulShooter
                 Logger.WriteLog("File not found : " + ConfigFile);
             }
         }
-        
+
         #endregion
 
         #region Memory Hack x86
@@ -645,7 +645,7 @@ namespace DemulShooter
             if (!_DisableInputHack)
                 Apply_InputsMemoryHack();
             else
-                Logger.WriteLog("Input Hack disabled");            
+                Logger.WriteLog("Input Hack disabled");
 
             Apply_OutputsMemoryHack();
 
@@ -858,7 +858,7 @@ namespace DemulShooter
                 }
             }
         }
-        
+
         /// <summary>
         /// Return the Text description for a desired Id
         /// </summary>
@@ -1002,7 +1002,7 @@ namespace DemulShooter
         {
             SendKey(Keycode, KeybdInputFlags.KEYEVENTF_KEYUP | KeybdInputFlags.KEYEVENTF_SCANCODE);
         }
-        
+
         /// <summary>
         /// VirtualKeyCode inputs to send
         /// </summary>
@@ -1058,7 +1058,7 @@ namespace DemulShooter
         public virtual IntPtr KeyboardHookCallback(IntPtr KeyboardHookID, int nCode, IntPtr wParam, IntPtr lParam)
         {
             return Win32API.CallNextHookEx(KeyboardHookID, nCode, wParam, lParam);
-        }           
+        }
 
         #endregion
 
@@ -1101,8 +1101,14 @@ namespace DemulShooter
         /// <returns></returns>
         protected bool FindGameWindow_Equals(string TargetWindowTitle)
         {
+            Logger.WriteLog("FindGameWindow_Equals");
+            Logger.WriteLog(TargetWindowTitle);
+            Logger.WriteLog(_TargetProcess.Id);
+
             foreach (IntPtr handle in EnumerateProcessWindowHandles(_TargetProcess.Id))
             {
+                Logger.WriteLog("Window : Handle = 0x" + handle.ToString("X8") + ", Title = " + WindowTitle);
+
                 int length = Win32API.GetWindowTextLength(handle);
                 if (length >= 0)
                 {
