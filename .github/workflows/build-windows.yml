@@ -39,6 +39,7 @@ jobs:
           name: DemulShooter-Windows-x86-Release
           path: |
             DemulShooter/bin/Release/DemulShooter.exe
+            DsCore/bin/Release/DsCore.dll
             DemulShooter_GUI/bin/Release/DemulShooter_GUI.exe
             DsDiag/bin/Release/DsDiag.exe
 
@@ -48,3 +49,4 @@ jobs:
           name: DemulShooter-Windows-x64-Release
           path: |
             DemulShooterX64/bin/x64/Release/DemulShooterX64.exe
+            DsCore/bin/x64/Release/DsCore.dll
