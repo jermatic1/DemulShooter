@@ -50,9 +50,12 @@ namespace DemulShooterX64.Games
             {
                 try
                 {
+                    Logger.WriteLog("Process.GetProcessesByName");
                     Process[] processes = Process.GetProcessesByName(_Target_Process_Name);
                     if (processes.Length > 0)
                     {
+                        Logger.WriteLog("processes.Length > 0");
+
                         _TargetProcess = processes[0];
                         _ProcessHandle = _TargetProcess.Handle;
                         _TargetProcess_MemoryBaseAddress = _TargetProcess.MainModule.BaseAddress;
@@ -61,6 +64,8 @@ namespace DemulShooterX64.Games
                         _GameWindowHandle = IntPtr.Zero;
                         if (_TargetProcess_MemoryBaseAddress != IntPtr.Zero)
                         {
+                            Logger.WriteLog("_TargetProcess_MemoryBaseAddress != IntPtr.Zero");
+
                             // The game may start with other Windows than the main one (BepInEx console, other stuff.....) so we need to filter
                             // the displayed window according to the Title, if DemulShooter is started before the game,  to hook the correct one
                             if (FindGameWindow_Equals(_MainWindowTitle))
