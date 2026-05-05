@@ -8,10 +8,10 @@ using DsCore;
 namespace DemulShooter
 {
     /// <summary>
-    /// TCP Input Server for simplified mouse protocol.
+    /// TCP Input Server for simplified mouse protocol supporting 4 players.
     /// Compatible with batocera-wine-guns for BTN_LEFT (trigger), BTN_RIGHT (reload), and BTN_MIDDLE (action).
-    /// Packet format: X(float) Y(float) EnableInputsHack(byte) HideCrosshairs(byte) Trigger(byte) Reload(byte) Action(byte)
-    /// Total: 13 bytes
+    /// Packet format: X[4](float) Y[4](float) EnableInputsHack(byte) HideCrosshairs(byte) Trigger[4](byte) Reload[4](byte) Action[4](byte)
+    /// Total: 46 bytes
     /// </summary>
     internal delegate void TcpInputDataHandler(float[] axisX, float[] axisY, bool[] trigger, bool[] reload, bool[] action);
 
@@ -148,31 +148,51 @@ namespace DemulShooter
         {
             try
             {
-                // Simple mouse protocol: X(float) Y(float) EnableInputsHack(byte) HideCrosshairs(byte) Trigger(byte) Reload(byte) Action(byte)
-                // Total: 13 bytes
-                const int EXPECTED_SIZE = 13;
+                // Simple mouse protocol for 4 players: X[4](float) Y[4](float) EnableInputsHack(byte) HideCrosshairs(byte) Trigger[4](byte) Reload[4](byte) Action[4](byte)
+                // Total: 16 + 16 + 1 + 1 + 4 + 4 + 4 = 46 bytes
+                const int EXPECTED_SIZE = 46;
 
                 if (bytesRead < EXPECTED_SIZE)
                     return;
 
-                float axisX = BitConverter.ToSingle(buffer, 0);
-                float axisY = BitConverter.ToSingle(buffer, 4);
+                float[] axisX = new float[4];
+                float[] axisY = new float[4];
+                bool[] trigger = new bool[4];
+                bool[] reload = new bool[4];
+                bool[] action = new bool[4];
+
+                int offset = 0;
+
+                // Read X coordinates for all 4 players
+                for (int i = 0; i < 4; i++)
+                {
+                    axisX[i] = BitConverter.ToSingle(buffer, offset);
+                    offset += 4;
+                }
+
+                // Read Y coordinates for all 4 players
+                for (int i = 0; i < 4; i++)
+                {
+                    axisY[i] = BitConverter.ToSingle(buffer, offset);
+                    offset += 4;
+                }
 
                 // Skip EnableInputsHack and HideCrosshairs flags
-                int offset = 8;
+                offset += 2;
 
-                bool trigger = buffer[offset++] != 0;  // BTN_LEFT
-                bool reload = buffer[offset++] != 0;   // BTN_RIGHT
-                bool action = buffer[offset++] != 0;   // BTN_MIDDLE
+                // Read trigger states for all 4 players
+                for (int i = 0; i < 4; i++)
+                    trigger[i] = buffer[offset++] != 0;
 
-                // Convert to arrays for the handler (only player 1 supported in this simple protocol)
-                float[] axisXArray = new float[4] { axisX, 0, 0, 0 };
-                float[] axisYArray = new float[4] { axisY, 0, 0, 0 };
-                bool[] triggerArray = new bool[4] { trigger, false, false, false };
-                bool[] reloadArray = new bool[4] { reload, false, false, false };
-                bool[] actionArray = new bool[4] { action, false, false, false };
+                // Read reload states for all 4 players
+                for (int i = 0; i < 4; i++)
+                    reload[i] = buffer[offset++] != 0;
 
-                _dataHandler?.Invoke(axisXArray, axisYArray, triggerArray, reloadArray, actionArray);
+                // Read action states for all 4 players
+                for (int i = 0; i < 4; i++)
+                    action[i] = buffer[offset++] != 0;
+
+                _dataHandler?.Invoke(axisX, axisY, trigger, reload, action);
             }
             catch (Exception ex)
             {

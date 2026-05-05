@@ -1259,7 +1259,7 @@ namespace DemulShooter
         /// <summary>
         /// Handler for binary DemulShooter protocol data from TCP clients.
         /// Converts normalized float coordinates and button states to player input events.
-        /// Supports BTN_LEFT (trigger), BTN_RIGHT (reload), and BTN_MIDDLE (action).
+        /// Supports BTN_LEFT (trigger), BTN_RIGHT (reload), and BTN_MIDDLE (action) for 4 players.
         /// </summary>
         internal void ProcessTcpInputData(float[] axisX, float[] axisY, bool[] trigger, bool[] reload, bool[] action)
         {
