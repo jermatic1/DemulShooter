@@ -32,9 +32,9 @@ namespace DemulShooterX64
 
         protected System.Timers.Timer _tProcess;
         protected String _RomName = string.Empty;
-        protected Process _TargetProcess;        
+        protected Process _TargetProcess;
         protected String _Target_Process_Name = String.Empty;
-        protected IntPtr _TargetProcess_MemoryBaseAddress = IntPtr.Zero;        
+        protected IntPtr _TargetProcess_MemoryBaseAddress = IntPtr.Zero;
         protected IntPtr _ProcessHandle = IntPtr.Zero;
         protected IntPtr _GameWindowHandle = IntPtr.Zero;
 
@@ -51,8 +51,8 @@ namespace DemulShooterX64
 
         protected bool _ProcessHooked;
         public bool ProcessHooked
-        { 
-            get { return _ProcessHooked; } 
+        {
+            get { return _ProcessHooked; }
         }
 
         #endregion
@@ -96,8 +96,8 @@ namespace DemulShooterX64
 
             _tProcess = new System.Timers.Timer();
             _tProcess.Interval = 500;
-            _tProcess.Elapsed += new ElapsedEventHandler(tProcess_Elapsed); 
-            _tProcess.Enabled = true;            
+            _tProcess.Elapsed += new ElapsedEventHandler(tProcess_Elapsed);
+            _tProcess.Enabled = true;
         }
 
         ~Game()
@@ -159,7 +159,7 @@ namespace DemulShooterX64
 
         /// <summary>
         /// Compute the MD5 hash of the target executable and compare it to the known list of MD5 Hashes
-        /// This can be usefull if people are using some unknown dump with different memory, 
+        /// This can be usefull if people are using some unknown dump with different memory,
         /// or a wrong version of emulator
         /// This is absolutely not blocking, just for debuging with output log
         /// </summary>
@@ -465,7 +465,7 @@ namespace DemulShooterX64
                 if (Win32API.GetWindowRect(_GameWindowHandle, ref _WindowRect))
                 {
                     _clientWindowLocation.X = _WindowRect.Left;
-                    _clientWindowLocation.Y = _WindowRect.Top;                    
+                    _clientWindowLocation.Y = _WindowRect.Top;
                 }
                 else
                 {
@@ -584,7 +584,7 @@ namespace DemulShooterX64
                                     UInt64 v = UInt64.Parse(buffer[1].Substring(3).Trim(), NumberStyles.HexNumber);
                                     this.GetType().GetField(FieldName, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase).SetValue(this, v);
                                     Logger.WriteLog(FieldName + " successfully set to following value : 0x" + v.ToString("X8"));
-                                }                                
+                                }
                             }
                             catch (Exception ex)
                             {
@@ -601,8 +601,8 @@ namespace DemulShooterX64
                 Logger.WriteLog("File not found : " + ConfigFile);
             }
         }
-        
-        #endregion       
+
+        #endregion
 
         #region MemoryHack x64
 
@@ -976,7 +976,7 @@ namespace DemulShooterX64
         {
             SendKey(Keycode, KeybdInputFlags.KEYEVENTF_KEYUP | KeybdInputFlags.KEYEVENTF_SCANCODE);
         }
-        
+
         /// <summary>
         /// VirtualKeyCode inputs to send
         /// </summary>
@@ -1032,7 +1032,7 @@ namespace DemulShooterX64
         public virtual IntPtr KeyboardHookCallback(IntPtr KeyboardHookID, int nCode, IntPtr wParam, IntPtr lParam)
         {
             return Win32API.CallNextHookEx(KeyboardHookID, nCode, wParam, lParam);
-        }           
+        }
 
         #endregion
 
@@ -1075,6 +1075,10 @@ namespace DemulShooterX64
         /// <returns></returns>
         protected bool FindGameWindow_Equals(string TargetWindowTitle)
         {
+            Logger.WriteLog("FindGameWindow_Equals");
+            Logger.WriteLog(TargetWindowTitle);
+            Logger.WriteLog(_TargetProcess.Id.ToString());
+
             foreach (IntPtr handle in EnumerateProcessWindowHandles(_TargetProcess.Id))
             {
                 int length = Win32API.GetWindowTextLength(handle);
@@ -1098,7 +1102,7 @@ namespace DemulShooterX64
             }
 
             return false;
-        }        
+        }
 
         /// <summary>
         /// Get the list of Windows for a given process
