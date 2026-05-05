@@ -20,17 +20,28 @@ jobs:
           Write-Host "Found MSBuild: $msbuild"
           echo "MSBUILD=$msbuild" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      - name: Build Visual Studio solution
+      - name: Build Visual Studio solution (x86)
         shell: pwsh
         run: |
           & "$env:MSBUILD" DemulShooter.sln /p:Configuration=Release /p:Platform=x86
 
-      - name: Upload built artifacts
+      - name: Build Visual Studio solution (x64)
+        shell: pwsh
+        run: |
+          & "$env:MSBUILD" DemulShooter.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Upload x86 artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DemulShooter-Windows-Release
+          name: DemulShooter-Windows-x86-Release
           path: |
-            DemulShooter/bin/Release/
-            DemulShooter_GUI/bin/Release/
-            DsDiag/bin/Release/
-            DemulShooterX64/bin/Release/
+            DemulShooter/bin/Release/DemulShooter.exe
+            DemulShooter_GUI/bin/Release/DemulShooter_GUI.exe
+            DsDiag/bin/Release/DsDiag.exe
+
+      - name: Upload x64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DemulShooter-Windows-x64-Release
+          path: |
+            DemulShooterX64/bin/x64/Release/DemulShooterX64.exe
