@@ -1107,7 +1107,7 @@ namespace DemulShooter
 
             foreach (IntPtr handle in EnumerateProcessWindowHandles(_TargetProcess.Id))
             {
-                Logger.WriteLog("Window : Handle = 0x" + handle.ToString("X8") + ", Title = " + WindowTitle);
+                Logger.WriteLog("Window : Handle = 0x" + handle.ToString("X8"));
 
                 int length = Win32API.GetWindowTextLength(handle);
                 if (length >= 0)
